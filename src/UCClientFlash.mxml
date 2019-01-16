@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:mx="library://ns.adobe.com/flex/mx"  creationComplete="main()">
+	<fx:Script>
+		<![CDATA[
+			import com.necsphere.generated.ClientInfo;
+			import com.necsphere.generated.LoginService;
+			import mx.messaging.ChannelSet;
+			import mx.messaging.channels.AMFChannel;
+			import mx.messaging.channels.SecureAMFChannel;
+			import mx.messaging.channels.SecureStreamingAMFChannel;
+			import mx.messaging.channels.StreamingAMFChannel;
+			import mx.rpc.AsyncResponder;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			public var cs:ChannelSet=null;
+			private var streaminAMFChannel:StreamingAMFChannel;
+			private var amfChannel:AMFChannel;	
+			public var serverSTUB:String = "https://voip-manager.spherecom.com:9443"
+
+			public function main():void
+			{
+				cs = new ChannelSet();
+				streaminAMFChannel = new SecureStreamingAMFChannel("my-secure-amf-stream", serverSTUB + "/RiaService" + "/messagebroker/securestreamingamf");
+				amfChannel = new SecureAMFChannel("my-secure-amf",serverSTUB + "/RiaService" + "/messagebroker/amflongpolling");
+				amfChannel.requestTimeout = 45;
+				cs.heartbeatInterval = 30000;
+				cs.addChannel(streaminAMFChannel);
+				cs.addChannel(amfChannel);
+			}
+			
+			public function checkAPIVersion(event:ResultEvent = null, token:Object = null):void
+			{
+				var clientInfo:ClientInfo = new ClientInfo();
+				clientInfo.friendlyName = "rbirsan";
+				clientInfo.type = "UCClient";
+				var loginService:LoginService  = new LoginService();
+				loginService.endpoint = serverSTUB + "/RiaService/messagebroker/amf"
+				var ltoken:AsyncToken = loginService.login(clientInfo, LoginService.LOGIN_REASON_NORMAL);
+				ltoken.addResponder(new AsyncResponder(handleAuthenticateSuccess,handleLoginFault));
+			}
+		
+			private function handleAuthenticateSuccess(event:ResultEvent = null, token:Object = null):void
+			{
+				but.label = "handleAuthenticateSuccess";
+			}
+			
+			private function handleLoginFault(event:FaultEvent = null, token:Object = null):void
+			{
+				but.label = event;
+			}
+
+			protected function login(event:MouseEvent=null):void
+			{
+				var token:AsyncToken = cs.login('rbirsan'.toUpperCase(), "ThisISWork?");
+				token.addResponder(	new AsyncResponder(checkAPIVersion, handleLoginFault));
+			}
+			
+		]]>
+	</fx:Script>
+	<mx:Button label="Login" id="but" width="200" click="login(event)" />
+</mx:Application>
